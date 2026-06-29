@@ -1,5 +1,9 @@
 # Civic Dispatch: Cybernetic Civil Infrastructure Intelligence Network
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/google-gemini/gemini-api-quickstart/main/images/gemini-api.png" alt="Google AI Studio" width="100%" />
+</p>
+
 **Civic Dispatch** is a high-fidelity, tactical-style civic reporting application designed to streamline community infrastructure management and bridge the gap between citizens and municipal authorities. Styled after a cybernetic command center interface, it empowers citizens to report local hazards, track response efforts, and leverage advanced intelligence networks to verify and prioritize issues.
 
 ---
