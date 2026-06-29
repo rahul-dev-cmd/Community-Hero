@@ -1,0 +1,222 @@
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-surface-tint: #dec1af;
+  --color-primary-container: #3d2b1f;
+  --color-primary: #dec1af;
+  --color-on-tertiary-fixed-variant: #92030f;
+  --color-background: #18120e;
+  --color-on-secondary-fixed-variant: #494740;
+  --color-on-secondary-fixed: #1d1c16;
+  --color-on-primary-fixed-variant: #574335;
+  --color-tertiary-container: #660007;
+  --color-on-tertiary-container: #ff6259;
+  --color-inverse-primary: #705a4c;
+  --color-on-error-container: #ffdad6;
+  --color-secondary: #cac6be;
+  --color-surface-container-low: #211a16;
+  --color-tertiary: #ffb4ac;
+  --color-on-primary: #3f2c20;
+  --color-on-primary-fixed: #28180d;
+  --color-on-error: #690005;
+  --color-on-primary-container: #ac9181;
+  --color-surface-variant: #3b332f;
+  --color-tertiary-fixed-dim: #ffb4ac;
+  --color-surface-container-highest: #3b332f;
+  --color-on-secondary: #32302a;
+  --color-inverse-surface: #ede0d9;
+  --color-tertiary-fixed: #ffdad6;
+  --color-surface-container-lowest: #130d09;
+  --color-error: #ffb4ab;
+  --color-on-secondary-container: #b9b5ac;
+  --color-primary-fixed: #fbddca;
+  --color-on-surface: #ede0d9;
+  --color-inverse-on-surface: #362f2a;
+  --color-surface-bright: #3f3833;
+  --color-secondary-container: #494740;
+  --color-secondary-fixed: #e7e2d9;
+  --color-on-surface-variant: #d2c4bc;
+  --color-surface-dim: #18120e;
+  --color-on-tertiary: #690007;
+  --color-primary-fixed-dim: #dec1af;
+  --color-secondary-fixed-dim: #cac6be;
+  --color-surface-container: #251e1a;
+  --color-on-tertiary-fixed: #410003;
+  --color-on-background: #ede0d9;
+  --color-outline: #9b8e87;
+  --color-outline-variant: #4f453f;
+  --color-surface: #18120e;
+  --color-error-container: #93000a;
+  --color-surface-container-high: #302924;
+
+  --font-headline-lg-mobile: "Oswald", sans-serif;
+  --font-label-sm: "IBM Plex Mono", monospace;
+  --font-body-md: "IBM Plex Mono", monospace;
+  --font-label-lg: "IBM Plex Mono", monospace;
+  --font-headline-lg: "Oswald", sans-serif;
+  --font-body-lg: "IBM Plex Mono", monospace;
+  --font-headline-sm: "Oswald", sans-serif;
+  --font-headline-md: "Oswald", sans-serif;
+
+  --text-headline-lg-mobile: 28px;
+  --text-label-sm: 10px;
+  --text-body-md: 14px;
+  --text-label-lg: 12px;
+  --text-headline-lg: 32px;
+  --text-body-lg: 16px;
+  --text-headline-sm: 20px;
+  --text-headline-md: 24px;
+
+  --spacing-unit: 4px;
+  --spacing-gutter: 16px;
+  --spacing-stack-loose: 32px;
+  --spacing-margin-edge: 20px;
+  --spacing-card-padding: 24px;
+  --spacing-stack-tight: 8px;
+}
+
+/* Custom styles from Stitch template */
+.noise-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.15;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+.typewriter-input {
+  background-color: transparent;
+  border: none;
+  border-bottom: 2px solid #18120e;
+  border-radius: 0;
+  box-shadow: none !important;
+  padding: 8px 0;
+  width: 100%;
+  transition: border-color 0.2s;
+}
+
+.typewriter-input:focus {
+  outline: none;
+  border-bottom-color: #690007; /* on-tertiary */
+}
+
+.stamp-button {
+  border: 3px solid #660007; /* tertiary-container */
+  color: #660007;
+  background: transparent;
+  text-transform: uppercase;
+  font-weight: bold;
+  padding: 12px 24px;
+  transform: rotate(-2deg);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.stamp-button::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.4'/%3E%3C/svg%3E");
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.corkboard {
+  background-color: #3d2b1f; /* primary-container */
+  background-image: radial-gradient(#28180d 1px, transparent 1px);
+  background-size: 8px 8px;
+}
+
+.corkboard-bg {
+  background-color: #3D2B1F;
+  background-image: url(https://lh3.googleusercontent.com/aida-public/AB6AXuCzSMrd21-ZKKxN2VL6RnC8obm-Y4k8Y-R4K9IFbF0n5iaPdBLLqtW3Md0Bi8phwxgtRaoqJNce9dyS0WyQtAeHGE62laxv5r-7jzd2lFGt9wV9yz28_T9SIQZ6KzO2oBf5QJVHheoiDVSYXV5Xi9wpBspxHqRhQFDBZYleQ-6fvZHuCEiwsrjn1i_geY0wK1t7wN9RgysMDMC9QTy3vmuHeQ8LEhOSH6pOXNP3iM-9aVz64-KlQr3aA_Rpb9GrZRDuCKpwikBODMxS);
+  background-blend-mode: overlay;
+}
+
+.polaroid {
+  background-color: #F4EFE6;
+  padding: 8px 8px 32px 8px;
+  box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.red-string {
+  position: absolute;
+  height: 2px;
+  background-color: #C23B3B;
+  transform-origin: 0 50%;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.green-string {
+  position: absolute;
+  height: 2px;
+  background-color: #2E7D5B;
+  transform-origin: 0 50%;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.pin {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: inset -2px -2px 4px rgba(0, 0, 0, 0.5), 2px 2px 4px rgba(0, 0, 0, 0.4);
+  z-index: 20;
+}
+
+.pin-red {
+  background-color: #C23B3B;
+}
+
+.pin-green {
+  background-color: #2E7D5B;
+}
+
+body {
+  min-height: max(884px, 100dvh);
+}
+
+.paper-texture {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='paperNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.04' numOctaves='5' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23paperNoise)' opacity='0.05'/%3E%3C/svg%3E");
+}
+
+@keyframes scanSweep {
+  0% { top: -10%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 110%; opacity: 0; }
+}
+
+.scanner-line {
+  animation: scanSweep 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes slamStamp {
+  0% { transform: scale(3) rotate(-15deg); opacity: 0; }
+  50% { transform: scale(0.8) rotate(-22deg); opacity: 1; }
+  70% { transform: scale(1.1) rotate(-18deg); opacity: 1; }
+  100% { transform: scale(1) rotate(-20deg); opacity: 1; }
+}
+
+.stamp-slam {
+  animation: slamStamp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  animation-delay: 1.5s; /* Wait for a half-scan */
+  opacity: 0;
+}
+
+.stamp-border {
+  mask-image: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='2' y='2' width='96' height='96' fill='none' stroke='black' stroke-width='4' stroke-dasharray='10 2 4 4 8 2 12 4'/%3E%3C/svg%3E");
+  mask-size: 100% 100%;
+}

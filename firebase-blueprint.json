@@ -1,0 +1,34 @@
+{
+  "entities": {
+    "Issue": {
+      "title": "Issue",
+      "description": "A civic issue or report submitted by citizens",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "incidentType": { "type": "string" },
+        "location": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          },
+          "required": ["lat", "lng"]
+        },
+        "description": { "type": "string" },
+        "imageDataUrl": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "verificationsCount": { "type": "number" },
+        "verifiedBy": { "type": "array" }
+      },
+      "required": ["id", "incidentType"]
+    }
+  },
+  "firestore": {
+    "issues/{issueId}": {
+      "schema": "Issue",
+      "description": "Collection of all reported civic issues"
+    }
+  }
+}

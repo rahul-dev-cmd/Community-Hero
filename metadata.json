@@ -1,0 +1,6 @@
+{
+  "name": "Community Hero",
+  "description": "A civic issue-reporting platform styled as a detective's case-file evidence board, allowing citizens to report local infrastructure problems, verify them, and track their resolution.",
+  "requestFramePermissions": ["geolocation", "camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Match issues collection
+    match /issues/{issueId} {
+      // Allow read and write for the server-side API requests
+      allow read, write: if true;
+    }
+
+    // Match users collection
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+  }
+}
