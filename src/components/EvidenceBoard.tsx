@@ -14,8 +14,13 @@ export default function EvidenceBoard({ onNavigate }: EvidenceBoardProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ username: string; city: string } | null>(() => {
-    const saved = localStorage.getItem("civic_user");
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem("civic_user");
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      console.warn("Failed to parse civic_user in EvidenceBoard:", e);
+      return null;
+    }
   });
 
   const handleSignOut = () => {
@@ -25,9 +30,14 @@ export default function EvidenceBoard({ onNavigate }: EvidenceBoardProps) {
 
   useEffect(() => {
     const fetchIssues = () => {
-      const saved = localStorage.getItem("civic_user");
-      const user = saved ? JSON.parse(saved) : null;
-      const city = user ? user.city : "New York";
+      let city = "New York";
+      try {
+        const saved = localStorage.getItem("civic_user");
+        const user = saved ? JSON.parse(saved) : null;
+        if (user && user.city) city = user.city;
+      } catch (e) {
+        console.warn("Failed to parse civic_user in EvidenceBoard fetchIssues:", e);
+      }
 
       fetch(`/api/issues?city=${encodeURIComponent(city)}`)
         .then((res) => res.json())

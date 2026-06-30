@@ -12,8 +12,13 @@ import AuthModal from "./components/AuthModal";
 export default function App() {
   const [currentTab, setCurrentTab] = useState<string>("evidence-board");
   const [currentUser, setCurrentUser] = useState<{ username: string; city: string } | null>(() => {
-    const saved = localStorage.getItem("civic_user");
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem("civic_user");
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      console.warn("Failed to parse civic_user in App init:", e);
+      return null;
+    }
   });
 
   useEffect(() => {
@@ -27,8 +32,12 @@ export default function App() {
   // Sync state with localStorage to catch logins or logouts instantly
   useEffect(() => {
     const handleStorageChange = () => {
-      const saved = localStorage.getItem("civic_user");
-      setCurrentUser(saved ? JSON.parse(saved) : null);
+      try {
+        const saved = localStorage.getItem("civic_user");
+        setCurrentUser(saved ? JSON.parse(saved) : null);
+      } catch (e) {
+        console.warn("Failed to parse civic_user in storage sync:", e);
+      }
     };
 
     window.addEventListener("storage", handleStorageChange);

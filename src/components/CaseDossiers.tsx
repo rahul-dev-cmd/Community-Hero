@@ -13,8 +13,13 @@ export default function CaseDossiers({ onNavigate }: CaseDossiersProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Check if there's a logged in user
-  const loggedInUserStr = localStorage.getItem("civic_user");
-  const loggedInUser = loggedInUserStr ? JSON.parse(loggedInUserStr) : null;
+  let loggedInUser = null;
+  try {
+    const loggedInUserStr = localStorage.getItem("civic_user");
+    loggedInUser = loggedInUserStr ? JSON.parse(loggedInUserStr) : null;
+  } catch (e) {
+    console.warn("Failed to parse civic_user in CaseDossiers:", e);
+  }
   const loggedInUsername = loggedInUser ? loggedInUser.username : "";
 
   // If logged in, use their username as the identifier for filtering dossiers; otherwise fallback to guest sessionId
@@ -22,9 +27,14 @@ export default function CaseDossiers({ onNavigate }: CaseDossiersProps) {
 
   useEffect(() => {
     const fetchIssues = () => {
-      const saved = localStorage.getItem("civic_user");
-      const user = saved ? JSON.parse(saved) : null;
-      const city = user ? user.city : "New York";
+      let city = "New York";
+      try {
+        const saved = localStorage.getItem("civic_user");
+        const user = saved ? JSON.parse(saved) : null;
+        if (user && user.city) city = user.city;
+      } catch (e) {
+        console.warn("Failed to parse civic_user in CaseDossiers fetchIssues:", e);
+      }
 
       fetch(`/api/issues?city=${encodeURIComponent(city)}`)
         .then((res) => res.json())

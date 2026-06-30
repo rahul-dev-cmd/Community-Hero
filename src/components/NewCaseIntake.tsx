@@ -28,6 +28,7 @@ export default function NewCaseIntake({ onNavigate }: NewCaseIntakeProps) {
   // Auto AI classification states
   const [isDetecting, setIsDetecting] = useState<boolean>(false);
   const [detectionConfidence, setDetectionConfidence] = useState<number | null>(null);
+  const [isOverridden, setIsOverridden] = useState<boolean>(false);
 
   // Validation Error States
   const [photoError, setPhotoError] = useState<string>("");
@@ -249,7 +250,7 @@ export default function NewCaseIntake({ onNavigate }: NewCaseIntakeProps) {
     });
   };
 
-  const runAiDetection = async (base64Str: string) => {
+  const runAiDetection = async (base64Str: string, name?: string) => {
     if (!base64Str) return;
     setIsDetecting(true);
     setDetectionConfidence(null);
@@ -257,13 +258,14 @@ export default function NewCaseIntake({ onNavigate }: NewCaseIntakeProps) {
       const res = await fetch("/api/detect-incident", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageDataUrl: base64Str })
+        body: JSON.stringify({ imageDataUrl: base64Str, fileName: name })
       });
       if (res.ok) {
         const data = await res.json();
         if (data.incidentType) {
           setIncidentType(data.incidentType);
           setDetectionConfidence(data.confidence);
+          setIsOverridden(false);
         }
       }
     } catch (err) {
@@ -289,7 +291,7 @@ export default function NewCaseIntake({ onNavigate }: NewCaseIntakeProps) {
             try {
               const frameUrl = await extractVideoFrame(base64Str);
               setImageDataUrl(frameUrl);
-              runAiDetection(frameUrl);
+              runAiDetection(frameUrl, file.name);
             } catch (err) {
               console.warn("Could not extract frame from video file:", err);
               setImageDataUrl("");
@@ -297,7 +299,7 @@ export default function NewCaseIntake({ onNavigate }: NewCaseIntakeProps) {
           } else {
             setImageDataUrl(base64Str);
             setVideoDataUrl("");
-            runAiDetection(base64Str);
+            runAiDetection(base64Str, file.name);
           }
         }
       };
@@ -357,8 +359,13 @@ export default function NewCaseIntake({ onNavigate }: NewCaseIntakeProps) {
 
     setIsSubmitting(true);
 
-    const loggedInUserStr = localStorage.getItem("civic_user");
-    const loggedInUser = loggedInUserStr ? JSON.parse(loggedInUserStr) : null;
+    let loggedInUser = null;
+    try {
+      const loggedInUserStr = localStorage.getItem("civic_user");
+      loggedInUser = loggedInUserStr ? JSON.parse(loggedInUserStr) : null;
+    } catch (e) {
+      console.warn("Failed to parse civic_user in NewCaseIntake:", e);
+    }
     const loggedInUsername = loggedInUser ? loggedInUser.username : "";
     const loggedInCity = loggedInUser ? loggedInUser.city : "New York";
     const sessionId = loggedInUsername || localStorage.getItem("chSessionId") || "";
@@ -541,7 +548,12 @@ export default function NewCaseIntake({ onNavigate }: NewCaseIntakeProps) {
                       <span className="material-symbols-outlined text-[12px] animate-spin">orbit</span> AI SCANNING EVIDENCE...
                     </span>
                   )}
-                  {!isDetecting && detectionConfidence !== null && (
+                  {!isDetecting && isOverridden && (
+                    <span className="text-[10px] text-amber-800 font-bold font-mono uppercase tracking-wider flex items-center gap-1 animate-pulse">
+                      <span className="material-symbols-outlined text-[12px]">edit_square</span> 🔧 Manual Override Active
+                    </span>
+                  )}
+                  {!isDetecting && !isOverridden && detectionConfidence !== null && (
                     <span className="text-[10px] text-green-800 font-bold font-mono uppercase tracking-wider">
                       ⚡ AI Auto-Detected ({Math.round(detectionConfidence * 100)}% Match)
                     </span>
@@ -552,9 +564,49 @@ export default function NewCaseIntake({ onNavigate }: NewCaseIntakeProps) {
                   placeholder={isDetecting ? "ANALYZING FILE FOR TYPE..." : "Pot-hole / Broken Main / etc..."} 
                   type="text"
                   value={incidentType}
-                  onChange={(e) => setIncidentType(e.target.value)}
+                  onChange={(e) => {
+                    setIncidentType(e.target.value);
+                    setIsOverridden(true);
+                  }}
                   disabled={isDetecting}
                 />
+                
+                {/* Manual Override Chip Selection */}
+                <div className="mt-2">
+                  <div className="text-[10px] text-gray-500 font-bold tracking-wider uppercase mb-1 flex items-center gap-1 font-mono">
+                    <span className="material-symbols-outlined text-[11px]">tune</span> Manual Reclassification (Fix AI mistakes):
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      "Road Damage",
+                      "Road Collapse",
+                      "Pothole",
+                      "Water Leakage",
+                      "Streetlight Outage",
+                      "Waste Management",
+                      "Other Infrastructure"
+                    ].map((cat) => {
+                      const isSelected = incidentType.trim().toUpperCase() === cat.toUpperCase();
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => {
+                            setIncidentType(cat);
+                            setIsOverridden(true);
+                          }}
+                          className={`px-2 py-0.5 text-[10px] font-bold font-mono tracking-wide uppercase transition-all duration-150 cursor-pointer border ${
+                            isSelected
+                              ? "bg-amber-800 text-amber-50 border-amber-950 shadow-sm"
+                              : "bg-[#e2dacb] text-gray-700 border-gray-400 hover:bg-[#d5ccbb] hover:text-black"
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
               
               <div className="flex flex-col gap-1">

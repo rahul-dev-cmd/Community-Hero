@@ -9,7 +9,7 @@ interface DashboardStats {
   totalInProgress: number;
   totalResolved: number;
   categoryBreakdown: {
-    Pothole: number;
+    "Pothole & Road Damage": number;
     "Water Leakage": number;
     Streetlight: number;
     "Waste Management": number;
@@ -36,9 +36,16 @@ export default function PrecinctReport({ onNavigate }: PrecinctReportProps) {
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem("civic_user");
-    const user = saved ? JSON.parse(saved) : null;
-    const city = user ? user.city : "New York";
+    let city = "New York";
+    try {
+      const saved = localStorage.getItem("civic_user");
+      const user = saved ? JSON.parse(saved) : null;
+      if (user && user.city) {
+        city = user.city;
+      }
+    } catch (e) {
+      console.warn("Failed to parse civic_user in useEffect:", e);
+    }
 
     Promise.all([
       fetch(`/api/dashboard-stats?city=${encodeURIComponent(city)}`).then((res) => {
@@ -139,7 +146,7 @@ export default function PrecinctReport({ onNavigate }: PrecinctReportProps) {
       
       currentY += 6;
       const breakdown = stats.categoryBreakdown || {
-        Pothole: 0,
+        "Pothole & Road Damage": 0,
         "Water Leakage": 0,
         Streetlight: 0,
         "Waste Management": 0,
@@ -260,7 +267,7 @@ export default function PrecinctReport({ onNavigate }: PrecinctReportProps) {
     totalInProgress: 0,
     totalResolved: 0,
     categoryBreakdown: {
-      Pothole: 0,
+      "Pothole & Road Damage": 0,
       "Water Leakage": 0,
       Streetlight: 0,
       "Waste Management": 0,
@@ -288,8 +295,13 @@ export default function PrecinctReport({ onNavigate }: PrecinctReportProps) {
   const pctInProgress = getPercentage(activeStats.totalInProgress);
   const pctResolved = getPercentage(activeStats.totalResolved);
 
-  const savedUserStr = localStorage.getItem("civic_user");
-  const savedUser = savedUserStr ? JSON.parse(savedUserStr) : null;
+  let savedUser = null;
+  try {
+    const savedUserStr = localStorage.getItem("civic_user");
+    savedUser = savedUserStr ? JSON.parse(savedUserStr) : null;
+  } catch (e) {
+    console.warn("Failed to parse civic_user in PrecinctReport render:", e);
+  }
   const currentCityName = savedUser ? savedUser.city : "New York";
 
   const sortedByVotes = [...issues].sort((a, b) => (b.votes || 0) - (a.votes || 0));
@@ -542,7 +554,7 @@ export default function PrecinctReport({ onNavigate }: PrecinctReportProps) {
               {/* Bar List */}
               <div className="flex flex-col gap-4 font-mono text-sm">
                 {[
-                  { key: "Pothole", color: "bg-[#92030f]", label: "Pothole" },
+                  { key: "Pothole & Road Damage", color: "bg-[#92030f]", label: "Road & Pothole" },
                   { key: "Water Leakage", color: "bg-[#705a4c]", label: "Water Leakage" },
                   { key: "Streetlight", color: "bg-[#a38069]", label: "Streetlight" },
                   { key: "Waste Management", color: "bg-[#494740]", label: "Waste Mgmt" },
