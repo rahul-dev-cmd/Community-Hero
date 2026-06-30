@@ -51,6 +51,32 @@ try {
     db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId || undefined);
     isFirebaseConfigured = true;
     console.log("Firebase initialized successfully with project ID:", firebaseConfig.projectId);
+
+    // Self-healing Firestore Database check (handles custom DB ID not existing on user's GCP project)
+    if (firebaseConfig.firestoreDatabaseId) {
+      const testConnection = async () => {
+        try {
+          const testRef = doc(db, "system_test_connection", "ping");
+          await getDoc(testRef);
+          console.log("Successfully connected to Firestore database:", firebaseConfig.firestoreDatabaseId);
+        } catch (err: any) {
+          const errMsg = err?.message || String(err);
+          // If the database with custom ID is NOT_FOUND or Database not found
+          if (
+            errMsg.includes("NOT_FOUND") || 
+            errMsg.includes("Database not found") || 
+            (err?.code === 5) || 
+            (err?.code === "not-found")
+          ) {
+            console.warn(`Firestore database '${firebaseConfig.firestoreDatabaseId}' was not found. Falling back to default database '(default)' for local/production resilience.`);
+            db = getFirestore(firebaseApp);
+          } else {
+            console.error("Firestore test connection error:", err);
+          }
+        }
+      };
+      testConnection();
+    }
   } else {
     console.warn("Neither firebase-applet-config.json nor FIREBASE_* environment variables found! Firebase database not loaded.");
   }

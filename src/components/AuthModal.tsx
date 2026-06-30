@@ -3,9 +3,10 @@ import React, { useState } from "react";
 interface AuthModalProps {
   onClose: () => void;
   onSuccess: (username: string) => void;
+  noClose?: boolean;
 }
 
-export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
+export default function AuthModal({ onClose, onSuccess, noClose = false }: AuthModalProps) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -71,17 +72,24 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
               {isSignUp ? "CREATE SECURE CREDENTIALS" : "ESTABLISH SECURE LINK"}
             </p>
           </div>
-          <button 
-            onClick={onClose}
-            className="text-[#9b8e87] hover:text-[#ede0d9] transition-colors p-1"
-          >
-            <span className="material-symbols-outlined text-xl">close</span>
-          </button>
+          {!noClose && (
+            <button 
+              onClick={onClose}
+              className="text-[#9b8e87] hover:text-[#ede0d9] transition-colors p-1"
+            >
+              <span className="material-symbols-outlined text-xl">close</span>
+            </button>
+          )}
         </div>
 
         {error && (
           <div className="bg-[#92030f]/20 border border-[#92030f] text-[#ffb4ac] p-3 text-xs uppercase mb-4 tracking-wide font-semibold">
             &gt;&gt; ERROR: {error}
+            {!isSignUp && error.toLowerCase().includes("invalid") && (
+              <div className="mt-2 text-[10px] text-[#dec1af] font-normal normal-case leading-relaxed">
+                * If you have not registered on this system yet, click <span className="underline font-bold text-[#ede0d9] cursor-pointer" onClick={() => { setIsSignUp(true); setError(null); }}>"SIGN UP"</span> below to register first.
+              </div>
+            )}
           </div>
         )}
 
