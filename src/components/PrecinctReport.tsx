@@ -261,22 +261,22 @@ export default function PrecinctReport({ onNavigate }: PrecinctReportProps) {
   }
 
   // Fallback default stats for empty or errored states
-  const activeStats: DashboardStats = stats || {
-    totalReported: 0,
-    totalVerified: 0,
-    totalInProgress: 0,
-    totalResolved: 0,
+  const activeStats: DashboardStats = {
+    totalReported: stats?.totalReported ?? 0,
+    totalVerified: stats?.totalVerified ?? 0,
+    totalInProgress: stats?.totalInProgress ?? 0,
+    totalResolved: stats?.totalResolved ?? 0,
     categoryBreakdown: {
-      "Pothole & Road Damage": 0,
-      "Water Leakage": 0,
-      Streetlight: 0,
-      "Waste Management": 0,
-      "Other Infrastructure": 0,
+      "Pothole & Road Damage": stats?.categoryBreakdown?.["Pothole & Road Damage"] ?? 0,
+      "Water Leakage": stats?.categoryBreakdown?.["Water Leakage"] ?? 0,
+      Streetlight: stats?.categoryBreakdown?.Streetlight ?? 0,
+      "Waste Management": stats?.categoryBreakdown?.["Waste Management"] ?? 0,
+      "Other Infrastructure": stats?.categoryBreakdown?.["Other Infrastructure"] ?? 0,
     },
     topHotspotCategory: {
-      category: "None",
-      count: 0,
-    },
+      category: stats?.topHotspotCategory?.category ?? "None",
+      count: stats?.topHotspotCategory?.count ?? 0,
+    }
   };
 
   const totalCases =
@@ -613,15 +613,15 @@ export default function PrecinctReport({ onNavigate }: PrecinctReportProps) {
                 
                 {topVotedIssue ? (
                   <p className="font-mono text-xs md:text-sm leading-relaxed italic border-l-2 border-yellow-500/50 pl-2 mt-1">
-                    "Most urgent concern in {currentCityName}: {topVotedIssue.incidentType} — {topVotedIssue.votes} community votes."
+                    &ldquo;Most urgent concern in {currentCityName}: {topVotedIssue.incidentType} &mdash; {topVotedIssue.votes} community votes.&rdquo;
                   </p>
                 ) : activeStats.topHotspotCategory.category && activeStats.topHotspotCategory.category !== "None" ? (
                   <p className="font-mono text-xs md:text-sm leading-relaxed italic border-l-2 border-yellow-500/50 pl-2 mt-1">
-                    "Most reported issue type: {activeStats.topHotspotCategory.category} ({activeStats.topHotspotCategory.count} cases)."
+                    &ldquo;Most reported issue type: {activeStats.topHotspotCategory.category} ({activeStats.topHotspotCategory.count} cases).&rdquo;
                   </p>
                 ) : (
                   <p className="font-mono text-xs md:text-sm leading-relaxed italic border-l-2 border-yellow-500/50 pl-2 mt-1">
-                    "Intelligence update: No critical volume peaks detected yet in {currentCityName}."
+                    &ldquo;Intelligence update: No critical volume peaks detected yet in {currentCityName}.&rdquo;
                   </p>
                 )}
 

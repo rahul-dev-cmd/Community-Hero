@@ -296,8 +296,13 @@ export default function EvidenceAnalysis({ issue, onClose, onNavigate }: Evidenc
   }, [activeTab]);
 
   // Check if there's a logged in user
-  const loggedInUserStr = localStorage.getItem("civic_user");
-  const loggedInUser = loggedInUserStr ? JSON.parse(loggedInUserStr) : null;
+  let loggedInUser = null;
+  try {
+    const loggedInUserStr = localStorage.getItem("civic_user");
+    loggedInUser = loggedInUserStr ? JSON.parse(loggedInUserStr) : null;
+  } catch (e) {
+    console.warn("Failed to parse civic_user in EvidenceAnalysis:", e);
+  }
   const loggedInUsername = loggedInUser ? loggedInUser.username : "";
 
   // Use username if logged in; otherwise fallback to guest sessionId

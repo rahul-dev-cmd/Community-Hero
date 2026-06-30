@@ -284,10 +284,12 @@ app.get("/api/issues", async (req, res) => {
 
     if (city) {
       const filterCity = String(city).trim().toLowerCase();
-      issuesList = issuesList.filter((issue: any) => {
+      issuesList = issuesList.filter(Boolean).filter((issue: any) => {
         const issueCity = (issue.city || "New York").trim().toLowerCase();
         return issueCity === filterCity;
       });
+    } else {
+      issuesList = issuesList.filter(Boolean);
     }
 
     // Sort issues by createdAt descending
@@ -424,10 +426,12 @@ app.get("/api/dashboard-stats", async (req, res) => {
 
     if (city) {
       const filterCity = String(city).trim().toLowerCase();
-      issuesList = issuesList.filter((issue: any) => {
+      issuesList = issuesList.filter(Boolean).filter((issue: any) => {
         const issueCity = (issue.city || "New York").trim().toLowerCase();
         return issueCity === filterCity;
       });
+    } else {
+      issuesList = issuesList.filter(Boolean);
     }
 
     let totalReported = 0;
