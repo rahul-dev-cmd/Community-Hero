@@ -36,14 +36,18 @@ export default function PrecinctReport({ onNavigate }: PrecinctReportProps) {
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
 
   useEffect(() => {
+    const saved = localStorage.getItem("civic_user");
+    const user = saved ? JSON.parse(saved) : null;
+    const city = user ? user.city : "New York";
+
     Promise.all([
-      fetch("/api/dashboard-stats").then((res) => {
+      fetch(`/api/dashboard-stats?city=${encodeURIComponent(city)}`).then((res) => {
         if (!res.ok) {
           throw new Error("Failed to fetch dashboard stats");
         }
         return res.json();
       }),
-      fetch("/api/issues").then((res) => {
+      fetch(`/api/issues?city=${encodeURIComponent(city)}`).then((res) => {
         if (!res.ok) {
           throw new Error("Failed to fetch issues");
         }
@@ -56,7 +60,7 @@ export default function PrecinctReport({ onNavigate }: PrecinctReportProps) {
         setLoading(false);
       })
       .catch((err) => {
-        console.error("Dashboard statistics load failure:", err);
+        console.warn("Dashboard statistics load failure:", err);
         setError("Unable to retrieve district case analytics. Link connection offline.");
         setLoading(false);
       });
@@ -103,10 +107,9 @@ export default function PrecinctReport({ onNavigate }: PrecinctReportProps) {
       doc.setLineWidth(0.5);
       doc.line(15, 52, 195, 52);
 
-      // 4 Metrics
+      // 3 Metrics
       const metrics = [
         { label: "REPORTED CASES", count: stats.totalReported },
-        { label: "VERIFIED CASES", count: stats.totalVerified },
         { label: "IN-PROGRESS CASES", count: stats.totalInProgress },
         { label: "RESOLVED CASES", count: stats.totalResolved }
       ];
@@ -178,7 +181,11 @@ export default function PrecinctReport({ onNavigate }: PrecinctReportProps) {
       if (stats.topHotspotCategory && stats.topHotspotCategory.count > 0) {
         doc.text(`CRITICAL HOTSPOT CATEGORY: ${stats.topHotspotCategory.category.toUpperCase()}`, 20, currentY + 3);
         doc.setFont("Helvetica", "normal");
-        doc.text(`Identified peak volume anomaly with a total of ${stats.topHotspotCategory.count} classified incidents.`, 20, currentY + 8);
+        let infoStr = `Identified peak volume anomaly with a total of ${stats.topHotspotCategory.count} classified incidents.`;
+        if (topVotedIssue) {
+          infoStr = `Peak volume: ${stats.topHotspotCategory.count} cases. Most urgent concern: "${topVotedIssue.incidentType}" with ${topVotedIssue.votes} community votes.`;
+        }
+        doc.text(infoStr, 20, currentY + 8);
       } else {
         doc.text("CRITICAL HOTSPOT STATUS: NOMINAL", 20, currentY + 3);
         doc.setFont("Helvetica", "normal");
@@ -267,7 +274,6 @@ export default function PrecinctReport({ onNavigate }: PrecinctReportProps) {
 
   const totalCases =
     activeStats.totalReported +
-    activeStats.totalVerified +
     activeStats.totalInProgress +
     activeStats.totalResolved;
 
@@ -278,9 +284,16 @@ export default function PrecinctReport({ onNavigate }: PrecinctReportProps) {
   };
 
   const pctReported = getPercentage(activeStats.totalReported);
-  const pctVerified = getPercentage(activeStats.totalVerified);
+  const pctVerified = 0;
   const pctInProgress = getPercentage(activeStats.totalInProgress);
   const pctResolved = getPercentage(activeStats.totalResolved);
+
+  const savedUserStr = localStorage.getItem("civic_user");
+  const savedUser = savedUserStr ? JSON.parse(savedUserStr) : null;
+  const currentCityName = savedUser ? savedUser.city : "New York";
+
+  const sortedByVotes = [...issues].sort((a, b) => (b.votes || 0) - (a.votes || 0));
+  const topVotedIssue = sortedByVotes.length > 0 && (sortedByVotes[0].votes || 0) > 0 ? sortedByVotes[0] : null;
 
   return (
     <div className="bg-background text-on-background font-body-md h-screen overflow-hidden flex flex-col md:flex-row relative">
@@ -479,11 +492,10 @@ export default function PrecinctReport({ onNavigate }: PrecinctReportProps) {
             </button>
           </div>
           
-          {/* Top Section: 4 Stat Cards in a row */}
-          <section className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+          {/* Top Section: 3 Stat Cards in a row */}
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
             {[
               { label: "Reported", statusKey: "REPORTED", count: activeStats.totalReported, rotation: "-rotate-2", pinColor: "bg-red-600" },
-              { label: "Verified", statusKey: "VERIFIED", count: activeStats.totalVerified, rotation: "rotate-1", pinColor: "bg-amber-600" },
               { label: "In Progress", statusKey: "IN_PROGRESS", count: activeStats.totalInProgress, rotation: "-rotate-1", pinColor: "bg-blue-600" },
               { label: "Resolved", statusKey: "RESOLVED", count: activeStats.totalResolved, rotation: "rotate-2", pinColor: "bg-green-600" },
             ].map((card, idx) => (
@@ -587,13 +599,17 @@ export default function PrecinctReport({ onNavigate }: PrecinctReportProps) {
                   CRIMINAL / CIVIC ANOMALY ANALYSIS
                 </span>
                 
-                {activeStats.topHotspotCategory.category && activeStats.topHotspotCategory.category !== "None" ? (
+                {topVotedIssue ? (
+                  <p className="font-mono text-xs md:text-sm leading-relaxed italic border-l-2 border-yellow-500/50 pl-2 mt-1">
+                    "Most urgent concern in {currentCityName}: {topVotedIssue.incidentType} — {topVotedIssue.votes} community votes."
+                  </p>
+                ) : activeStats.topHotspotCategory.category && activeStats.topHotspotCategory.category !== "None" ? (
                   <p className="font-mono text-xs md:text-sm leading-relaxed italic border-l-2 border-yellow-500/50 pl-2 mt-1">
                     "Most reported issue type: {activeStats.topHotspotCategory.category} ({activeStats.topHotspotCategory.count} cases)."
                   </p>
                 ) : (
                   <p className="font-mono text-xs md:text-sm leading-relaxed italic border-l-2 border-yellow-500/50 pl-2 mt-1">
-                    "Intelligence update: No critical volume peaks detected yet in Precinct 04."
+                    "Intelligence update: No critical volume peaks detected yet in {currentCityName}."
                   </p>
                 )}
 
@@ -632,14 +648,6 @@ export default function PrecinctReport({ onNavigate }: PrecinctReportProps) {
                           title={`Reported: ${activeStats.totalReported}. Click to inspect.`}
                         ></div>
                       )}
-                      {pctVerified > 0 && (
-                        <div
-                          onClick={() => setSelectedStatus("VERIFIED")}
-                          style={{ width: `${pctVerified}%` }}
-                          className="bg-[#705a4c] h-full transition-all duration-500 hover:opacity-90 relative group cursor-pointer"
-                          title={`Verified: ${activeStats.totalVerified}. Click to inspect.`}
-                        ></div>
-                      )}
                       {pctInProgress > 0 && (
                         <div
                           onClick={() => setSelectedStatus("IN_PROGRESS")}
@@ -673,16 +681,6 @@ export default function PrecinctReport({ onNavigate }: PrecinctReportProps) {
                     <span className="font-bold text-xs md:text-sm">{pctReported.toFixed(0)}%</span>
                   </div>
                   <div 
-                    onClick={() => setSelectedStatus("VERIFIED")}
-                    className="flex justify-between items-center cursor-pointer hover:bg-black/5 p-1 rounded transition-colors group"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 bg-[#705a4c] border border-black/20 block rounded-sm"></span>
-                      <span className="font-bold group-hover:underline text-xs md:text-sm">Verified ({activeStats.totalVerified})</span>
-                    </div>
-                    <span className="font-bold text-xs md:text-sm">{pctVerified.toFixed(0)}%</span>
-                  </div>
-                  <div 
                     onClick={() => setSelectedStatus("IN_PROGRESS")}
                     className="flex justify-between items-center cursor-pointer hover:bg-black/5 p-1 rounded transition-colors group"
                   >
@@ -706,6 +704,88 @@ export default function PrecinctReport({ onNavigate }: PrecinctReportProps) {
               </div>
 
             </div>
+          </section>
+
+          {/* Section: Community Concern Priority Leaderboard */}
+          <section className="bg-[#1e1511] border-2 border-[#4f453f] p-6 shadow-[6px_6px_12px_rgba(0,0,0,0.65)] relative text-left">
+            <div className="absolute top-2 right-4 text-[#9b8e87] opacity-40 font-mono text-xs">
+              SEC-VOTE // INTEL
+            </div>
+            
+            <div className="border-b border-[#4f453f] pb-3 mb-4">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-orange-500 font-bold block">
+                COMMUNITY PRIORITY SIGNAL LEADERBOARD
+              </span>
+              <h3 className="font-sans font-bold uppercase text-lg text-[#ede0d9] leading-tight">
+                URGENT PUBLIC CONCERNS (BY COMMUNITY VOTES)
+              </h3>
+              <p className="text-xs text-[#9b8e87] font-mono mt-1">
+                Incidents in {currentCityName} with priority backing from local residents. More votes indicate a greater level of community distress and urgency.
+              </p>
+            </div>
+
+            {sortedByVotes.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 italic font-mono text-xs border border-dashed border-[#4f453f] bg-black/20 p-4">
+                &gt;&gt; NO COMMUNITY VOTE SIGNALS RECORDED YET IN {currentCityName.toUpperCase()}.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {sortedByVotes.map((issue, index) => {
+                  const percentOfTotal = issue.votes ? Math.min(100, (issue.votes / (sortedByVotes[0].votes || 1)) * 100) : 0;
+                  const shortId = issue.id.slice(-4).toUpperCase();
+                  return (
+                    <div 
+                      key={issue.id}
+                      onClick={() => setSelectedIssue(issue)}
+                      className="bg-[#130d09] border border-[#4f453f] hover:border-orange-500 p-3 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer transition-colors group"
+                    >
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        {/* Vote rank index badge */}
+                        <div className="w-6 h-6 flex-shrink-0 bg-black/40 border border-[#4f453f] text-[#ffedd5] font-mono text-xs flex items-center justify-center font-bold">
+                          #{index + 1}
+                        </div>
+                        
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono text-xs font-bold text-[#dec1af] uppercase group-hover:text-orange-400 transition-colors">
+                              EXH-{shortId} • {issue.incidentType}
+                            </span>
+                            <span className={`text-[9px] px-1.5 py-0.5 font-mono uppercase border font-bold ${
+                              issue.status === "RESOLVED" 
+                                ? "bg-green-950/40 text-green-400 border-green-800" 
+                                : issue.status === "IN_PROGRESS"
+                                ? "bg-blue-950/40 text-blue-400 border-blue-800"
+                                : "bg-red-950/40 text-red-400 border-red-800"
+                            }`}>
+                              {issue.status || "REPORTED"}
+                            </span>
+                          </div>
+                          
+                          <p className="text-xs text-[#9b8e87] truncate mt-1 italic">
+                            "{issue.description || "No further intelligence logs recorded..."}"
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Vote indicator */}
+                      <div className="flex items-center gap-4 flex-shrink-0">
+                        <div className="w-32 bg-black/40 h-2 border border-[#4f453f] hidden sm:block relative overflow-hidden rounded-sm">
+                          <div 
+                            style={{ width: `${percentOfTotal}%` }}
+                            className="bg-orange-600 h-full transition-all duration-500"
+                          ></div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 bg-[#7c2d12]/20 border border-[#ea580c]/30 px-3 py-1 font-mono text-xs font-bold text-orange-400">
+                          <span className="material-symbols-outlined text-xs">bolt</span>
+                          <span>{issue.votes || 0} VOTES</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </section>
 
           {/* Large Stamped Indicator at the bottom of report */}

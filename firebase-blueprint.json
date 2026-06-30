@@ -20,7 +20,9 @@
         "status": { "type": "string" },
         "createdAt": { "type": "number" },
         "verificationsCount": { "type": "number" },
-        "verifiedBy": { "type": "array" }
+        "verifiedBy": { "type": "array" },
+        "votes": { "type": "number" },
+        "votedBy": { "type": "array" }
       },
       "required": ["id", "incidentType"]
     }

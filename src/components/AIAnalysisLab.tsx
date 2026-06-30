@@ -15,7 +15,11 @@ export default function AIAnalysisLab({ onNavigate }: AIAnalysisLabProps) {
 
   useEffect(() => {
     const fetchIssues = () => {
-      fetch("/api/issues")
+      const saved = localStorage.getItem("civic_user");
+      const user = saved ? JSON.parse(saved) : null;
+      const city = user ? user.city : "New York";
+
+      fetch(`/api/issues?city=${encodeURIComponent(city)}`)
         .then((res) => res.json())
         .then((data) => {
           setIssues(data);
@@ -28,7 +32,7 @@ export default function AIAnalysisLab({ onNavigate }: AIAnalysisLabProps) {
           });
         })
         .catch((err) => {
-          console.error("AI Lab database loading failed:", err);
+          console.warn("AI Lab database loading failed:", err);
           setLoading(false);
         });
     };

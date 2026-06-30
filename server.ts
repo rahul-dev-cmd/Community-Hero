@@ -125,6 +125,15 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 const memoryIssuesStore: Record<string, any> = {};
 const memoryUsersStore: Record<string, any> = {};
 
+// Auto-healing utility disabled as vouch/verified system is removed
+function healIssueAndQueueSave(issue: any): any {
+  if (issue) {
+    if (issue.votes === undefined) issue.votes = 0;
+    if (issue.votedBy === undefined) issue.votedBy = [];
+  }
+  return issue;
+}
+
 // API routes FIRST
 app.get("/api/health", (req, res) => {
   res.json({
@@ -168,6 +177,7 @@ app.post("/api/auth/signup", async (req, res) => {
       username: username.trim(),
       cleanUsername,
       password, // simple plain storage for demo
+      city: (req.body.city || "New York").trim(),
       createdAt: Date.now()
     };
 
@@ -184,7 +194,7 @@ app.post("/api/auth/signup", async (req, res) => {
       memoryUsersStore[cleanUsername] = newUser;
     }
 
-    return res.status(201).json({ success: true, user: { username: newUser.username } });
+    return res.status(201).json({ success: true, user: { username: newUser.username, city: newUser.city } });
   } catch (error: any) {
     console.error("Signup error:", error);
     return res.status(500).json({ error: "Signup failed.", details: error.message });
@@ -221,7 +231,7 @@ app.post("/api/auth/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid username or password." });
     }
 
-    return res.json({ success: true, user: { username: user.username } });
+    return res.json({ success: true, user: { username: user.username, city: user.city || "New York" } });
   } catch (error: any) {
     console.error("Login error:", error);
     return res.status(500).json({ error: "Login failed.", details: error.message });
@@ -230,30 +240,37 @@ app.post("/api/auth/login", async (req, res) => {
 
 // GET all issues
 app.get("/api/issues", async (req, res) => {
+  const { city } = req.query;
   try {
+    let issuesList: any[] = [];
     if (isFirebaseConfigured && db) {
       try {
         const issuesCol = collection(db, "issues");
         const snapshot = await getDocs(issuesCol);
-        const issuesList = snapshot.docs.map(doc => ({
+        issuesList = snapshot.docs.map(doc => healIssueAndQueueSave({
           id: doc.id,
           ...doc.data()
         }));
-        // Sort issues by createdAt descending
-        issuesList.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
-        return res.json(issuesList);
       } catch (dbErr) {
         console.warn("Firestore collection fetch failed, falling back to memory:", dbErr);
-        const issuesList = Object.values(memoryIssuesStore);
-        issuesList.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
-        return res.json(issuesList);
+        issuesList = Object.values(memoryIssuesStore).map(healIssueAndQueueSave);
       }
     } else {
       // Fallback
-      const issuesList = Object.values(memoryIssuesStore);
-      issuesList.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
-      return res.json(issuesList);
+      issuesList = Object.values(memoryIssuesStore).map(healIssueAndQueueSave);
     }
+
+    if (city) {
+      const filterCity = String(city).trim().toLowerCase();
+      issuesList = issuesList.filter((issue: any) => {
+        const issueCity = (issue.city || "New York").trim().toLowerCase();
+        return issueCity === filterCity;
+      });
+    }
+
+    // Sort issues by createdAt descending
+    issuesList.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+    return res.json(issuesList);
   } catch (error: any) {
     console.error("Error retrieving issues:", error);
     res.status(500).json({ error: "Failed to retrieve issues", details: error.message });
@@ -283,6 +300,8 @@ app.get("/api/issues/:id", async (req, res) => {
     if (!issue) {
       return res.status(404).json({ error: "Issue not found" });
     }
+
+    issue = healIssueAndQueueSave(issue);
 
     return res.json(issue);
   } catch (error: any) {
@@ -320,7 +339,10 @@ app.post("/api/issues", async (req, res) => {
           timestamp: issueData.createdAt || Date.now()
         }
       ],
-      reporterSessionId: issueData.reporterSessionId || ""
+      reporterSessionId: issueData.reporterSessionId || "",
+      city: issueData.city || "New York",
+      votes: issueData.votes || 0,
+      votedBy: issueData.votedBy || []
     };
 
     if (isFirebaseConfigured && db) {
@@ -350,22 +372,31 @@ app.post("/api/issues", async (req, res) => {
 
 // GET dashboard statistics
 app.get("/api/dashboard-stats", async (req, res) => {
+  const { city } = req.query;
   try {
     let issuesList: any[] = [];
     if (isFirebaseConfigured && db) {
       try {
         const issuesCol = collection(db, "issues");
         const snapshot = await getDocs(issuesCol);
-        issuesList = snapshot.docs.map(doc => ({
+        issuesList = snapshot.docs.map(doc => healIssueAndQueueSave({
           id: doc.id,
           ...doc.data()
         }));
       } catch (dbErr) {
         console.warn("Firestore stats fetch failed, falling back to memory:", dbErr);
-        issuesList = Object.values(memoryIssuesStore);
+        issuesList = Object.values(memoryIssuesStore).map(healIssueAndQueueSave);
       }
     } else {
-      issuesList = Object.values(memoryIssuesStore);
+      issuesList = Object.values(memoryIssuesStore).map(healIssueAndQueueSave);
+    }
+
+    if (city) {
+      const filterCity = String(city).trim().toLowerCase();
+      issuesList = issuesList.filter((issue: any) => {
+        const issueCity = (issue.city || "New York").trim().toLowerCase();
+        return issueCity === filterCity;
+      });
     }
 
     let totalReported = 0;
@@ -384,10 +415,8 @@ app.get("/api/dashboard-stats", async (req, res) => {
     issuesList.forEach(issue => {
       // 1. Counts by status
       const status = (issue.status || "").toUpperCase();
-      if (status === "REPORTED") {
+      if (status === "REPORTED" || status === "VERIFIED") {
         totalReported++;
-      } else if (status === "VERIFIED") {
-        totalVerified++;
       } else if (status === "IN_PROGRESS" || status === "IN PROGRESS" || status === "PROGRESS") {
         totalInProgress++;
       } else if (status === "RESOLVED") {
@@ -734,6 +763,9 @@ app.post("/api/issues/:id/verify", async (req, res) => {
     issue.caseHistory = caseHistory;
     issue.status = currentStatus;
 
+    // Instantly check for auto-promotion to VERIFIED status if vouch count >= 3
+    issue = healIssueAndQueueSave(issue);
+
     // Save back
     if (isFirebaseConfigured && db) {
       try {
@@ -753,6 +785,123 @@ app.post("/api/issues/:id/verify", async (req, res) => {
   } catch (error: any) {
     console.error("Error verifying issue:", error);
     res.status(500).json({ error: "Failed to verify issue", details: error.message });
+  }
+});
+
+// POST vote for an issue
+app.post("/api/issues/:id/vote", async (req, res) => {
+  const { id } = req.params;
+  const { username } = req.body;
+
+  if (!username) {
+    return res.status(400).json({ error: "Username is required to vote." });
+  }
+
+  const cleanUsername = username.trim().toLowerCase();
+
+  try {
+    // 1. Retrieve the voting user to check existence and city
+    let user: any = null;
+    if (isFirebaseConfigured && db) {
+      try {
+        const docRef = doc(db, "users", cleanUsername);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          user = docSnap.data();
+        } else {
+          user = memoryUsersStore[cleanUsername];
+        }
+      } catch (dbErr) {
+        console.warn(`Firestore getDoc failed for user ${cleanUsername}:`, dbErr);
+        user = memoryUsersStore[cleanUsername];
+      }
+    } else {
+      user = memoryUsersStore[cleanUsername];
+    }
+
+    if (!user) {
+      return res.status(401).json({ error: "Unauthorized. Please log in first." });
+    }
+
+    // 2. Retrieve the issue
+    let issue: any = null;
+    if (isFirebaseConfigured && db) {
+      try {
+        const docRef = doc(db, "issues", id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          issue = { id: docSnap.id, ...docSnap.data() };
+        } else {
+          issue = memoryIssuesStore[id];
+        }
+      } catch (dbErr) {
+        console.warn(`Firestore getDoc failed for issue ${id}:`, dbErr);
+        issue = memoryIssuesStore[id];
+      }
+    } else {
+      issue = memoryIssuesStore[id];
+    }
+
+    if (!issue) {
+      return res.status(404).json({ error: "Case not found." });
+    }
+
+    // Apply auto-healing defaults for safety
+    issue = healIssueAndQueueSave(issue);
+
+    // 3. Validation checks
+    const reporterId = (issue.reporterSessionId || "").trim().toLowerCase();
+    const voterId = cleanUsername;
+
+    // Reject if the requesting user is the original reporter (no self-voting)
+    if (reporterId === voterId) {
+      return res.status(400).json({ error: "You cannot vote on your own case." });
+    }
+
+    // Reject if already in votedBy (no duplicate voting)
+    const votedBy: string[] = issue.votedBy || [];
+    const alreadyVoted = votedBy.some((v: string) => v.trim().toLowerCase() === voterId);
+    if (alreadyVoted) {
+      return res.status(400).json({ error: "You have already voted on this case." });
+    }
+
+    // Enforce that voting only works on cases in the same city as the voting user
+    const issueCity = (issue.city || "New York").trim().toLowerCase();
+    const userCity = (user.city || "New York").trim().toLowerCase();
+    if (issueCity !== userCity) {
+      return res.status(400).json({ error: "You can only vote on cases in your own city." });
+    }
+
+    // 4. Increment votes and add username to votedBy
+    issue.votes = (issue.votes || 0) + 1;
+    issue.votedBy.push(user.username); // Store display username
+
+    // Optional history log
+    if (issue.caseHistory) {
+      issue.caseHistory.push({
+        action: `Voted by ${user.username}`,
+        timestamp: Date.now()
+      });
+    }
+
+    // Save the updated issue
+    if (isFirebaseConfigured && db) {
+      try {
+        const docRef = doc(db, "issues", id);
+        await setDoc(docRef, issue);
+        memoryIssuesStore[id] = issue;
+      } catch (dbErr) {
+        console.warn(`Firestore setDoc failed during vote for ${id}, falling back to memory:`, dbErr);
+        memoryIssuesStore[id] = issue;
+      }
+    } else {
+      memoryIssuesStore[id] = issue;
+    }
+
+    return res.json({ success: true, votes: issue.votes, votedBy: issue.votedBy });
+  } catch (error: any) {
+    console.error("Error voting on issue:", error);
+    res.status(500).json({ error: "Failed to vote on issue", details: error.message });
   }
 });
 
@@ -795,12 +944,11 @@ app.post("/api/issues/:id/status", async (req, res) => {
 
     const currentStatus = (issue.status || "REPORTED").toUpperCase().trim().replace(" ", "_");
     
-    // Status hierarchy verification: Reported (0) -> Verified (1) -> In Progress (2) -> Resolved (3)
+    // Status hierarchy verification: Reported (0) -> In Progress (1) -> Resolved (2)
     const statusHierarchy: Record<string, number> = {
       "REPORTED": 0,
-      "VERIFIED": 1,
-      "IN_PROGRESS": 2,
-      "RESOLVED": 3
+      "IN_PROGRESS": 1,
+      "RESOLVED": 2
     };
 
     const currentLevel = statusHierarchy[currentStatus] !== undefined ? statusHierarchy[currentStatus] : 0;

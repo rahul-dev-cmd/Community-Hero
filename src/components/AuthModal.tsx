@@ -2,7 +2,7 @@ import React, { useState } from "react";
 
 interface AuthModalProps {
   onClose: () => void;
-  onSuccess: (username: string) => void;
+  onSuccess: (username: string, city: string) => void;
   noClose?: boolean;
 }
 
@@ -10,6 +10,7 @@ export default function AuthModal({ onClose, onSuccess, noClose = false }: AuthM
   const [isSignUp, setIsSignUp] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [city, setCity] = useState("New York");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +31,11 @@ export default function AuthModal({ onClose, onSuccess, noClose = false }: AuthM
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: username.trim(), password }),
+        body: JSON.stringify({ 
+          username: username.trim(), 
+          password,
+          city: isSignUp ? city : undefined
+        }),
       });
 
       const data = await response.json();
@@ -40,9 +45,10 @@ export default function AuthModal({ onClose, onSuccess, noClose = false }: AuthM
       }
 
       // Success
-      const userInfo = { username: data.user.username };
+      const userCity = data.user.city || "New York";
+      const userInfo = { username: data.user.username, city: userCity };
       localStorage.setItem("civic_user", JSON.stringify(userInfo));
-      onSuccess(data.user.username);
+      onSuccess(data.user.username, userCity);
       onClose();
     } catch (err: any) {
       setError(err.message || "An error occurred.");
@@ -136,6 +142,27 @@ export default function AuthModal({ onClose, onSuccess, noClose = false }: AuthM
               </button>
             </div>
           </div>
+
+          {isSignUp && (
+            <div>
+              <label className="block text-[10px] font-bold text-[#dec1af] uppercase tracking-wider mb-1.5">
+                Operational City / District
+              </label>
+              <select
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="w-full bg-[#130d09] border-2 border-[#4f453f] p-2.5 text-sm text-[#ede0d9] focus:outline-none focus:border-[#dec1af] uppercase cursor-pointer"
+                disabled={loading}
+              >
+                <option value="New York">New York</option>
+                <option value="Kolkata">Kolkata</option>
+                <option value="London">London</option>
+                <option value="Tokyo">Tokyo</option>
+                <option value="Paris">Paris</option>
+                <option value="Sydney">Sydney</option>
+              </select>
+            </div>
+          )}
 
           <button
             type="submit"

@@ -11,7 +11,7 @@ import AuthModal from "./components/AuthModal";
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<string>("evidence-board");
-  const [currentUser, setCurrentUser] = useState<{ username: string } | null>(() => {
+  const [currentUser, setCurrentUser] = useState<{ username: string; city: string } | null>(() => {
     const saved = localStorage.getItem("civic_user");
     return saved ? JSON.parse(saved) : null;
   });
@@ -94,8 +94,8 @@ export default function App() {
         <div className="relative z-10 w-full max-w-md">
           <AuthModal 
             onClose={() => {}} 
-            onSuccess={(username) => {
-              setCurrentUser({ username });
+            onSuccess={(username, city) => {
+              setCurrentUser({ username, city });
             }}
             noClose={true}
           />

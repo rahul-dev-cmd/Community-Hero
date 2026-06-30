@@ -360,6 +360,7 @@ export default function NewCaseIntake({ onNavigate }: NewCaseIntakeProps) {
     const loggedInUserStr = localStorage.getItem("civic_user");
     const loggedInUser = loggedInUserStr ? JSON.parse(loggedInUserStr) : null;
     const loggedInUsername = loggedInUser ? loggedInUser.username : "";
+    const loggedInCity = loggedInUser ? loggedInUser.city : "New York";
     const sessionId = loggedInUsername || localStorage.getItem("chSessionId") || "";
 
     const postBody = {
@@ -376,6 +377,7 @@ export default function NewCaseIntake({ onNavigate }: NewCaseIntakeProps) {
       status: "REPORTED",
       createdAt: Date.now(),
       reporterSessionId: sessionId,
+      city: loggedInCity,
       verifyCount: 0,
       confirmedBy: [],
       caseHistory: [
@@ -401,7 +403,7 @@ export default function NewCaseIntake({ onNavigate }: NewCaseIntakeProps) {
         alert(`CRITICAL SERVER ERROR: ${errData.error || "UNKNOWN EXCEPTION"}`);
       }
     } catch (err: any) {
-      console.error("Submission failed:", err);
+      console.warn("Submission failed:", err);
       alert(`NETWORK CONFLICT: UNABLE TO WIRE DISPATCH DATA. ${err.message}`);
     } finally {
       setIsSubmitting(false);

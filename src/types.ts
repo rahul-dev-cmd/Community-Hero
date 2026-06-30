@@ -4,7 +4,7 @@ export interface Location {
   address?: string;
 }
 
-export type IssueStatus = "REPORTED" | "VERIFIED" | "IN_PROGRESS" | "RESOLVED";
+export type IssueStatus = "REPORTED" | "IN_PROGRESS" | "RESOLVED";
 
 export interface CaseHistoryEntry {
   action: string;
@@ -29,4 +29,7 @@ export interface Issue {
   confirmedBy?: string[];
   caseHistory?: CaseHistoryEntry[];
   reporterSessionId?: string;
+  city?: string;
+  votes?: number;
+  votedBy?: string[];
 }

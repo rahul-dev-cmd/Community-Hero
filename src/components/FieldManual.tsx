@@ -193,13 +193,13 @@ export default function FieldManual({ onNavigate }: FieldManualProps) {
             </div>
 
             <div>
-              <p className="font-bold uppercase tracking-wider text-red-800">3. CITIZEN VERIFICATION</p>
-              <p className="mt-1">Browse the Evidence Board to review local cases. Inspect the evidence closely and vouch for its validity. A case requires 3 community confirmations to progress from REPORTED to VERIFIED.</p>
+              <p className="font-bold uppercase tracking-wider text-red-800">3. CITIZEN COOPERATION</p>
+              <p className="mt-1">Browse the Evidence Board to review local cases. Inspect the evidence closely and leave critical feedback inside the AI investigation laboratory chat.</p>
             </div>
 
             <div>
               <p className="font-bold uppercase tracking-wider text-red-800">4. CASE LIFECYCLE</p>
-              <p className="mt-1">Cases transition dynamically from: Reported → Verified → In Progress → Resolved. Check Precinct Reports for real-time resolution metrics.</p>
+              <p className="mt-1">Cases transition dynamically from: Reported → In Progress → Resolved. Check Precinct Reports for real-time resolution metrics.</p>
             </div>
           </div>
         </div>

@@ -22,7 +22,11 @@ export default function CaseDossiers({ onNavigate }: CaseDossiersProps) {
 
   useEffect(() => {
     const fetchIssues = () => {
-      fetch("/api/issues")
+      const saved = localStorage.getItem("civic_user");
+      const user = saved ? JSON.parse(saved) : null;
+      const city = user ? user.city : "New York";
+
+      fetch(`/api/issues?city=${encodeURIComponent(city)}`)
         .then((res) => res.json())
         .then((data) => {
           setIssues(data);
@@ -35,7 +39,7 @@ export default function CaseDossiers({ onNavigate }: CaseDossiersProps) {
           });
         })
         .catch((err) => {
-          console.error("Failed to fetch issues in Dossier", err);
+          console.warn("Failed to fetch issues in Dossier", err);
           setLoading(false);
         });
     };

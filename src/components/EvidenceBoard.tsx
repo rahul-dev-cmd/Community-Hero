@@ -13,7 +13,7 @@ export default function EvidenceBoard({ onNavigate }: EvidenceBoardProps) {
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [currentUser, setCurrentUser] = useState<{ username: string } | null>(() => {
+  const [currentUser, setCurrentUser] = useState<{ username: string; city: string } | null>(() => {
     const saved = localStorage.getItem("civic_user");
     return saved ? JSON.parse(saved) : null;
   });
@@ -25,7 +25,11 @@ export default function EvidenceBoard({ onNavigate }: EvidenceBoardProps) {
 
   useEffect(() => {
     const fetchIssues = () => {
-      fetch("/api/issues")
+      const saved = localStorage.getItem("civic_user");
+      const user = saved ? JSON.parse(saved) : null;
+      const city = user ? user.city : "New York";
+
+      fetch(`/api/issues?city=${encodeURIComponent(city)}`)
         .then((res) => res.json())
         .then((data) => {
           setIssues(data);
@@ -38,7 +42,7 @@ export default function EvidenceBoard({ onNavigate }: EvidenceBoardProps) {
           });
         })
         .catch((err) => {
-          console.error("Failed to fetch issues", err);
+          console.warn("Failed to fetch issues", err);
           setLoading(false);
         });
     };
@@ -238,7 +242,7 @@ export default function EvidenceBoard({ onNavigate }: EvidenceBoardProps) {
         <div className="px-4 py-3 border-t border-[#4f453f] bg-[#1a1412] mt-4 text-left">
           {currentUser ? (
             <div className="flex flex-col gap-1 font-mono">
-              <span className="text-[10px] text-[#9b8e87] uppercase tracking-wider">OFFICER IDENTITY</span>
+              <span className="text-[10px] text-[#9b8e87] uppercase tracking-wider">OFFICER IDENTITY ({currentUser.city || "NEW YORK"})</span>
               <div className="flex justify-between items-center bg-[#130d09] border border-[#4f453f] p-2">
                 <span className="text-xs font-bold text-[#dec1af] uppercase tracking-wide truncate pr-2">
                   {currentUser.username}
@@ -327,7 +331,7 @@ export default function EvidenceBoard({ onNavigate }: EvidenceBoardProps) {
         <div className="px-4 py-3 border-t border-outline-variant bg-surface-container-high mt-4">
           {currentUser ? (
             <div className="flex flex-col gap-1 font-mono text-left">
-              <span className="text-[10px] text-outline uppercase tracking-wider">OFFICER IDENTITY</span>
+              <span className="text-[10px] text-outline uppercase tracking-wider">OFFICER IDENTITY ({currentUser.city || "NEW YORK"})</span>
               <div className="flex justify-between items-center bg-surface-dim border border-outline-variant p-2">
                 <span className="text-xs font-bold text-[#dec1af] uppercase tracking-wide truncate pr-2">
                   {currentUser.username}
@@ -427,7 +431,7 @@ export default function EvidenceBoard({ onNavigate }: EvidenceBoardProps) {
             </svg>
 
             {/* Dynamic Issue Polaroid Cards */}
-            {issues.map((issue, index) => {
+            {[...issues].sort((a, b) => (b.votes || 0) - (a.votes || 0)).map((issue, index) => {
               const { rotation, left, top } = getDeterministicStyles(issue.id, index);
               const isResolved = (issue.status || "").toUpperCase() === "RESOLVED";
               const pinColorClass = isResolved ? "pin-green" : "pin-red";
@@ -452,6 +456,12 @@ export default function EvidenceBoard({ onNavigate }: EvidenceBoardProps) {
                     className="h-40 w-full mb-3 border-b-4 border-white bg-cover bg-center bg-no-repeat bg-surface-dim relative"
                     style={{ backgroundImage: `url('${issue.imageDataUrl || "https://lh3.googleusercontent.com/aida-public/AB6AXuAhdD9IZzmufPz_XPSBY7owgAxFi1ptkQ9-6YRhoOSBYo7fkbMjbYUvS9afeTEjvRYpaG9FyBAuc2tdrdp05wytZpT9QiMYqKa6HN-6MgSDlikf_3k1RLo_gQr9vGRhRjpVB7YXUYrrJ2g3baTuwxEnDREgkW5LyFD8oSbeHwwHkXBJd-HP4TNy0k__VwGn_kftNvYHdDESKwJpKvFfrNkS8aMnFHwnChCxNqXHuFBUtE5c2KMYl_HUU-Z7naDZc5_cqkjc0isXDFdg"}')` }}
                   >
+                    {/* Vote Badge */}
+                    <div className="absolute top-2 left-2 bg-[#7c2d12] text-[#ffedd5] border border-[#ea580c] px-1.5 py-0.5 text-[9px] font-mono font-bold flex items-center gap-0.5 shadow-md rounded">
+                      <span className="material-symbols-outlined text-[11px] text-orange-400">bolt</span>
+                      <span>{issue.votes || 0}</span>
+                    </div>
+
                     {isResolved && (
                       <div className="absolute bottom-2 right-2 text-green-800 font-bold font-headline-sm transform -rotate-12 opacity-90 border-2 border-green-800 px-1 text-[10px] bg-[#F4EFE6] shadow-sm tracking-wider">
                         RESOLVED

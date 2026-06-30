@@ -24,6 +24,7 @@ export default function EvidenceAnalysis({ issue, onClose, onNavigate }: Evidenc
   const [error, setError] = useState<string | null>(null);
   const [verifying, setVerifying] = useState<boolean>(false);
   const [statusUpdating, setStatusUpdating] = useState<boolean>(false);
+  const [voting, setVoting] = useState<boolean>(false);
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
 
   const [activeTab, setActiveTab] = useState<"analysis" | "geospatial" | "chat">("analysis");
@@ -54,7 +55,7 @@ export default function EvidenceAnalysis({ issue, onClose, onNavigate }: Evidenc
       setMapsReport(data.text);
       setMapsChunks(data.groundingChunks || []);
     } catch (err: any) {
-      console.error("Geospatial fetch failed:", err);
+      console.warn("Geospatial fetch failed:", err);
       setMapsError("Uplink failed. Unable to query Google Maps database.");
     } finally {
       setMapsLoading(false);
@@ -278,7 +279,7 @@ export default function EvidenceAnalysis({ issue, onClose, onNavigate }: Evidenc
       const data = await response.json();
       setChatMessages((prev) => [...prev, { role: "assistant", text: data.text }]);
     } catch (err: any) {
-      console.error("Chat message failed:", err);
+      console.warn("Chat message failed:", err);
       setChatMessages((prev) => [
         ...prev,
         { role: "assistant", text: "CONNECTION INTERRUPTED. Mainframe terminal is temporarily offline." }
@@ -318,7 +319,7 @@ export default function EvidenceAnalysis({ issue, onClose, onNavigate }: Evidenc
           });
         }
       } catch (err) {
-        console.error("Failed to poll issue:", err);
+        console.warn("Failed to poll issue:", err);
       }
     };
 
@@ -350,7 +351,7 @@ export default function EvidenceAnalysis({ issue, onClose, onNavigate }: Evidenc
             aiSummary: updatedIssue.aiSummary,
           });
         } catch (err: any) {
-          console.error("AI Analysis failed:", err);
+          console.warn("AI Analysis failed:", err);
           setError("Failed to run precinct AI categorization. Please try again.");
         } finally {
           setAnalyzing(false);
@@ -386,7 +387,7 @@ export default function EvidenceAnalysis({ issue, onClose, onNavigate }: Evidenc
         setCurrentIssue(updated);
       }
     } catch (err: any) {
-      console.error("Vouching failed:", err);
+      console.warn("Vouching failed:", err);
       alert("Network conflict: Unable to submit vouch.");
     } finally {
       setVerifying(false);
@@ -409,10 +410,43 @@ export default function EvidenceAnalysis({ issue, onClose, onNavigate }: Evidenc
         setCurrentIssue(updated);
       }
     } catch (err: any) {
-      console.error("Status update failed:", err);
+      console.warn("Status update failed:", err);
       alert("Network conflict: Unable to transition case status.");
     } finally {
       setStatusUpdating(false);
+    }
+  };
+
+  const handleVote = async () => {
+    if (!loggedInUsername) {
+      setShowAuthModal(true);
+      return;
+    }
+    setVoting(true);
+    try {
+      const response = await fetch(`/api/issues/${currentIssue.id}/vote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: loggedInUsername })
+      });
+      if (!response.ok) {
+        const errData = await response.json();
+        alert(`VOTING ERROR: ${errData.error || "Failed to vote for issue"}`);
+      } else {
+        const result = await response.json();
+        if (result.success) {
+          setCurrentIssue({
+            ...currentIssue,
+            votes: result.votes,
+            votedBy: result.votedBy
+          });
+        }
+      }
+    } catch (err: any) {
+      console.warn("Voting failed:", err);
+      alert("Network conflict: Unable to submit vote.");
+    } finally {
+      setVoting(false);
     }
   };
 
@@ -445,6 +479,31 @@ export default function EvidenceAnalysis({ issue, onClose, onNavigate }: Evidenc
     return null;
   };
 
+  const issueVotes = currentIssue.votes || 0;
+  const issueVotedBy = currentIssue.votedBy || [];
+  
+  const isReporterUser = !!loggedInUsername && loggedInUsername.toLowerCase() === (currentIssue.reporterSessionId || "").toLowerCase();
+  const hasAlreadyVoted = !!loggedInUsername && issueVotedBy.some((v: string) => v.toLowerCase() === loggedInUsername.toLowerCase());
+  const isDifferentCity = !!loggedInUsername && loggedInUser && (loggedInUser.city || "New York").toLowerCase() !== (currentIssue.city || "New York").toLowerCase();
+  
+  const cannotVote = !loggedInUsername || isReporterUser || hasAlreadyVoted || isDifferentCity;
+
+  const getVoteNote = () => {
+    if (!loggedInUsername) {
+      return "Sign in to register your concern";
+    }
+    if (isReporterUser) {
+      return "You reported this case (cannot vote)";
+    }
+    if (hasAlreadyVoted) {
+      return "You have already registered your concern";
+    }
+    if (isDifferentCity) {
+      return `This case is in ${currentIssue.city || "New York"} (you are in ${loggedInUser?.city || "New York"})`;
+    }
+    return null;
+  };
+
   // Pin color: red for reported, verified, in progress; green for resolved
   const isResolved = currentStatus === "RESOLVED";
   const pinColorClass = isResolved ? "bg-green-600 border-green-800" : "bg-red-600 border-red-800";
@@ -462,7 +521,7 @@ export default function EvidenceAnalysis({ issue, onClose, onNavigate }: Evidenc
     }
   };
 
-  const showMarkInProgress = currentStatus === "REPORTED" || currentStatus === "VERIFIED";
+  const showMarkInProgress = currentStatus === "REPORTED";
   const showMarkResolved = currentStatus === "IN_PROGRESS";
 
   return (
@@ -835,30 +894,10 @@ export default function EvidenceAnalysis({ issue, onClose, onNavigate }: Evidenc
               <span className="font-bold text-[#dec1af] block uppercase text-[10px] tracking-wider border-b border-[#4f453f] pb-1 mb-1">
                 CIVIC COUNTERMEASURES
               </span>
-              
-              {cannotConfirm ? (
-                <div className="text-center font-mono text-[10px] text-[#9b8e87] tracking-wider border border-[#4f453f] border-dashed p-2 bg-[#130d09]/50">
-                  &gt;&gt; VOUCHING SUSPENDED: {getConfirmationNote()?.toUpperCase()}
-                </div>
-              ) : (
-                <div className="flex flex-col gap-1.5">
-                  <button
-                    onClick={handleVerify}
-                    disabled={verifying}
-                    className="w-full bg-[#92030f] hover:bg-[#b00514] text-[#F4EFE6] font-sans font-extrabold text-[11px] py-2.5 px-4 tracking-widest uppercase border-2 border-[#ffb4ac] shadow-[3px_3px_0px_rgba(0,0,0,0.4)] transition-all active:scale-95 cursor-pointer text-center flex items-center justify-center gap-2"
-                  >
-                    <span className="material-symbols-outlined text-[14px]">verified</span>
-                    {verifying ? "VOUCHING..." : `VOUCH FOR THIS CASE (${currentIssue.verifyCount || 0} VOUCHES)`}
-                  </button>
-                  <p className="text-[9px] text-center text-[#9b8e87] italic">
-                    *Every report is immediately dispatched to authorities. Vouches increase priority consideration rank.
-                  </p>
-                </div>
-              )}
 
               {/* Advancing/Municipal transitions */}
-              {(showMarkInProgress || showMarkResolved) && (
-                <div className="flex flex-col gap-2 mt-1">
+              {(showMarkInProgress || showMarkResolved) ? (
+                <div className="flex flex-col gap-2">
                   <span className="text-[9px] text-[#9b8e87] uppercase tracking-wider">PRECINCT LEVEL STATUS TRANSITION:</span>
                   <div className="flex gap-2 w-full">
                     {showMarkInProgress && (
@@ -881,7 +920,38 @@ export default function EvidenceAnalysis({ issue, onClose, onNavigate }: Evidenc
                     )}
                   </div>
                 </div>
+              ) : (
+                <div className="text-center font-mono text-[10px] text-[#9b8e87] tracking-wider border border-[#4f453f] border-dashed p-2 bg-[#130d09]/50">
+                  Case is currently resolved. No further transitions available.
+                </div>
               )}
+
+              {/* Community Priority Voting */}
+              <div className="flex flex-col gap-2 mt-2 pt-3 border-t border-[#4f453f]">
+                <span className="text-[9px] text-[#9b8e87] uppercase tracking-wider">Community Priority Signals:</span>
+                <button
+                  onClick={handleVote}
+                  disabled={cannotVote || voting}
+                  className={`w-full py-2 px-3 text-xs uppercase font-bold tracking-wider transition-all active:scale-95 cursor-pointer flex items-center justify-between border ${
+                    cannotVote 
+                      ? "bg-[#1a1412] text-[#4f453f] border-[#3d2b1f] cursor-not-allowed opacity-60" 
+                      : "bg-[#7c2d12] hover:bg-[#9a3412] text-[#ffedd5] border-[#ea580c] hover:text-white"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-sm">bolt</span>
+                    <span>{voting ? "SUBMITTING SIGNAL..." : "THIS CONCERNS ME TOO"}</span>
+                  </div>
+                  <span className="font-mono text-xs bg-black/40 px-2 py-0.5 rounded border border-[#ea580c]/30">
+                    {issueVotes} {issueVotes === 1 ? "VOTE" : "VOTES"}
+                  </span>
+                </button>
+                {getVoteNote() && (
+                  <span className="text-[9px] text-[#9b8e87] font-mono uppercase text-center block mt-0.5">
+                    // {getVoteNote()}
+                  </span>
+                )}
+              </div>
             </div>
           )}
 
