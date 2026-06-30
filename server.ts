@@ -5,6 +5,16 @@ import { initializeApp } from "firebase/app";
 import { getFirestore, collection, getDocs, doc, setDoc, getDoc } from "firebase/firestore";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+// Helper to validate the Gemini API key format (preventing crash/errors on placeholder keys)
+function isValidGeminiKey(key: string | undefined): boolean {
+  if (!key) return false;
+  const trimmed = key.trim();
+  return trimmed.startsWith("AIzaSy") && trimmed.length > 10 && trimmed !== "MY_GEMINI_API_KEY" && !trimmed.includes("YOUR_");
+}
 
 const app = express();
 const PORT = 3000;
@@ -17,15 +27,32 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
 let db: any;
 let isFirebaseConfigured = false;
 try {
+  let firebaseConfig: any = null;
   const configPath = path.join(process.cwd(), "firebase-applet-config.json");
+  
   if (fs.existsSync(configPath)) {
-    const firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+    firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+  } else if (process.env.FIREBASE_API_KEY && process.env.FIREBASE_PROJECT_ID) {
+    // Fallback to environment variables to support clean GitHub deployment and prevent secrets leakage in Git
+    firebaseConfig = {
+      apiKey: process.env.FIREBASE_API_KEY,
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      appId: process.env.FIREBASE_APP_ID || "",
+      authDomain: process.env.FIREBASE_AUTH_DOMAIN || `${process.env.FIREBASE_PROJECT_ID}.firebaseapp.com`,
+      firestoreDatabaseId: process.env.FIREBASE_FIRESTORE_DATABASE_ID || undefined,
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${process.env.FIREBASE_PROJECT_ID}.firebasestorage.app`,
+      messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || "",
+      measurementId: process.env.FIREBASE_MEASUREMENT_ID || ""
+    };
+  }
+
+  if (firebaseConfig) {
     const firebaseApp = initializeApp(firebaseConfig);
     db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId || undefined);
     isFirebaseConfigured = true;
     console.log("Firebase initialized successfully with project ID:", firebaseConfig.projectId);
   } else {
-    console.warn("firebase-applet-config.json not found! Firebase database not loaded.");
+    console.warn("Neither firebase-applet-config.json nor FIREBASE_* environment variables found! Firebase database not loaded.");
   }
 } catch (error) {
   console.error("Failed to initialize Firebase:", error);
@@ -424,8 +451,8 @@ app.post("/api/issues/:id/analyze", async (req, res) => {
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.warn("GEMINI_API_KEY is not defined. Using smart local analysis fallback.");
+    if (!isValidGeminiKey(apiKey)) {
+      console.warn("GEMINI_API_KEY is not defined or is a placeholder. Using smart local analysis fallback.");
       const mockCategories: Record<string, { category: string; severity: "Low" | "Medium" | "High"; summary: string }> = {
         "POT-HOLE": { category: "ROAD DAMAGE", severity: "Medium", summary: "A serious structural failure of the municipal asphalt surface requiring prompt repair." },
         "BROKEN MAIN": { category: "WATER INFRASTRUCTURE", severity: "High", summary: "A ruptured critical water main causing high-volume street-level flooding and erosion." },
@@ -541,8 +568,8 @@ app.post("/api/detect-incident", async (req, res) => {
 
   try {
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.warn("GEMINI_API_KEY is not defined. Falling back to default detection.");
+    if (!isValidGeminiKey(apiKey)) {
+      console.warn("GEMINI_API_KEY is not defined or is a placeholder. Falling back to default detection.");
       return res.json({ incidentType: "Pothole", confidence: 0.85 });
     }
 
@@ -861,8 +888,8 @@ Maintain a professional, sharp, objective, slightly gritty "noir detective" tone
       });
     }
 
-    if (!apiKey) {
-      console.warn("GEMINI_API_KEY is not defined. Using smart local assistant chat fallback.");
+    if (!isValidGeminiKey(apiKey)) {
+      console.warn("GEMINI_API_KEY is not defined or is a placeholder. Using smart local assistant chat fallback.");
       const lastUserText = messages && messages.length > 0 ? messages[messages.length - 1].text : "briefing";
       let fallbackText = `Detective, this is Officer Kore. Without direct uplink to HQ mainframe, I've run a localized analysis of Case #${issue.id}.\n\n`;
       if (lastUserText.toLowerCase().includes("status") || lastUserText.toLowerCase().includes("do") || lastUserText.toLowerCase().includes("next")) {
@@ -941,8 +968,8 @@ app.post("/api/issues/:id/maps-grounding", async (req, res) => {
     const lng = issue.location?.lng || -74.0060;
     const addressStr = issue.location?.address || "New York City Center";
 
-    if (!apiKey) {
-      console.warn("GEMINI_API_KEY not found. Using local mock Maps Grounding data.");
+    if (!isValidGeminiKey(apiKey)) {
+      console.warn("GEMINI_API_KEY not found or is a placeholder. Using local mock Maps Grounding data.");
       
       const mockText = `### GEOSPATIAL INTELLIGENCE REPORT
 **TARGET SITE:** ${addressStr} (Coordinates: ${lat.toFixed(4)}° N, ${lng.toFixed(4)}° W)
