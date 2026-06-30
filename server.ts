@@ -13,7 +13,12 @@ dotenv.config();
 function isValidGeminiKey(key: string | undefined): boolean {
   if (!key) return false;
   const trimmed = key.trim();
-  return trimmed.startsWith("AIzaSy") && trimmed.length > 10 && trimmed !== "MY_GEMINI_API_KEY" && !trimmed.includes("YOUR_");
+  return (
+    trimmed.length > 10 &&
+    trimmed !== "MY_GEMINI_API_KEY" &&
+    trimmed !== "YOUR_GEMINI_API_KEY" &&
+    !trimmed.includes("YOUR_")
+  );
 }
 
 const app = express();
