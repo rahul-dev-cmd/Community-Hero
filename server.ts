@@ -647,7 +647,9 @@ app.post("/api/detect-incident", async (req, res) => {
     // Provide clear, fast, and strict prompt for identifying the incident type
     const systemPrompt = `You are an automated real-time dispatch scanner. Analyze the civic defect from the photo or video frame.
 You must identify the exact incident type. Classify it strictly into one of these terms or similar short, readable titles:
-- Pothole
+- Road Collapse (use this for massive structural failures, deep canyon-like road splits, sinkholes, landslides collapsing the roadway, or collapsed lanes)
+- Road Damage (use this for severe asphalt cracking, buckling, large-scale deterioration of the road surface, or widespread wear)
+- Pothole (use this ONLY for small-to-medium localized bowl-shaped holes in the pavement asphalt)
 - Water Leakage
 - Streetlight Outage
 - Waste Management
@@ -662,7 +664,7 @@ Response MUST be a JSON object matching this schema:
 }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-lite", // Fast lightweight model for instant classification
+      model: "gemini-3.5-flash", // Recommended high-quality model for multimodal tasks
       contents: [
         {
           inlineData: {
